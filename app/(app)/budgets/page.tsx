@@ -1,114 +1,206 @@
-import { AlertTriangle, CheckCircle2, Plus, Target } from "lucide-react";
+import type { Metadata } from "next";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Pencil,
+  Plus,
+  Target,
+  TriangleAlert,
+} from "lucide-react";
+import { cn } from "cn";
 
+import { BudgetDialog } from "@/components/finance/budget-dialog";
+import { CategoryIcon } from "@/components/finance/category-icon";
+import { DeleteBudgetButton } from "@/components/finance/delete-budget-button";
+import { MonthNav } from "@/components/finance/month-nav";
+import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { requireUser } from "@/lib/auth";
+import { getCategories, getMonthBudgets, type BudgetRow, type CategoryOption } from "@/lib/data/finance";
 import { formatCurrency } from "@/lib/money";
+import { monthLabel, normalizeMonthKey } from "@/lib/period";
+import { createClient } from "@/lib/supabase/server";
 
-// ---------------------------------------------------------------------------
-// SAMPLE DATA — replaced by real Supabase queries in step 5.
-// ---------------------------------------------------------------------------
-const ksh = (major: number) => major * 100;
+export const metadata: Metadata = { title: "Budgets" };
 
-const budgets = [
-  { name: "Housing & Rent", spent: ksh(45_000), limit: ksh(60_000), color: "#8b5cf6" },
-  { name: "Food & Groceries", spent: ksh(24_600), limit: ksh(30_000), color: "#fb923c" },
-  { name: "Entertainment", spent: ksh(10_400), limit: ksh(10_000), color: "#2dd4bf" },
-];
+function BudgetCard({
+  budget,
+  categories,
+  monthKey,
+}: {
+  budget: BudgetRow;
+  categories: CategoryOption[];
+  monthKey: string;
+}) {
+  const ratio = budget.limitCents === 0 ? 0 : budget.spentCents / budget.limitCents;
+  const percentUsed = Math.round(ratio * 100);
+  const progressValue = Math.min(100, percentUsed);
+  const over = budget.spentCents > budget.limitCents;
+  const near = !over && ratio >= 0.8;
+  const StatusIcon = over ? AlertTriangle : near ? TriangleAlert : CheckCircle2;
 
-export default function BudgetsPage() {
+  const status = over
+    ? `Over budget by ${formatCurrency(budget.spentCents - budget.limitCents)}`
+    : `${formatCurrency(budget.limitCents - budget.spentCents)} left this month`;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${budget.categoryColor}1f`, color: budget.categoryColor }}
+          >
+            <CategoryIcon name={budget.categoryIcon} className="size-4" />
+          </span>
+          <span className="truncate">{budget.categoryName}</span>
+        </CardTitle>
+        <CardDescription>{percentUsed}% of limit used</CardDescription>
+        <CardAction className="flex gap-1">
+          <BudgetDialog
+            categories={categories}
+            month={monthKey}
+            budget={budget}
+          >
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Edit the ${budget.categoryName} budget`}
+            >
+              <Pencil aria-hidden />
+            </Button>
+          </BudgetDialog>
+          <DeleteBudgetButton id={budget.id} categoryName={budget.categoryName} />
+        </CardAction>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xl font-semibold tabular-nums">
+            {formatCurrency(budget.spentCents)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            of {formatCurrency(budget.limitCents)}
+          </span>
+        </div>
+
+        <Progress
+          value={progressValue}
+          className="h-2"
+          indicatorClassName={cn(
+            over ? "bg-rose-500" : near ? "bg-amber-400" : "bg-emerald-500",
+          )}
+          aria-label={`${budget.categoryName}: ${percentUsed}% of budget used`}
+        />
+
+        <p
+          className={cn(
+            "flex items-center gap-1.5 text-xs",
+            over
+              ? "text-rose-600 dark:text-rose-400"
+              : near
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-muted-foreground",
+          )}
+        >
+          <StatusIcon className="size-3.5" aria-hidden />
+          {status}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default async function BudgetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string | string[] }>;
+}) {
+  await requireUser();
+
+  const params = await searchParams;
+  const requested = Array.isArray(params.month) ? params.month[0] : params.month;
+  const monthKey = normalizeMonthKey(requested);
+
+  const supabase = await createClient();
+  const [budgets, categories] = await Promise.all([
+    getMonthBudgets(supabase, monthKey),
+    getCategories(supabase),
+  ]);
+
+  const totalLimit = budgets.reduce((total, budget) => total + budget.limitCents, 0);
+  const totalSpent = budgets.reduce((total, budget) => total + budget.spentCents, 0);
+
   return (
     <>
       <PageHeader
         title="Budgets"
-        description="October 2026 · limits reset on the 1st"
+        description={`${monthLabel(monthKey)} · limits are per category and reset each month`}
         action={
-          <>
-            <Badge variant="outline">Sample data</Badge>
-            <Button size="sm" disabled title="Available in step 5">
-              <Plus className="size-4" aria-hidden />
+          <BudgetDialog categories={categories} month={monthKey}>
+            <Button size="sm">
+              <Plus aria-hidden />
               Set budget
             </Button>
-          </>
+          </BudgetDialog>
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {budgets.map((budget) => {
-          const percent = Math.round((budget.spent / budget.limit) * 100);
-          const remaining = budget.limit - budget.spent;
-          const over = remaining < 0;
-          const near = percent >= 80 && !over;
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <MonthNav month={monthKey} basePath="/budgets" />
+        {budgets.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground tabular-nums">
+              {formatCurrency(totalSpent)}
+            </span>{" "}
+            spent of{" "}
+            <span className="font-medium text-foreground tabular-nums">
+              {formatCurrency(totalLimit)}
+            </span>{" "}
+            budgeted
+          </p>
+        ) : null}
+      </div>
 
-          return (
-            <Card key={budget.name}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <span
-                    className="size-2.5 rounded-full"
-                    style={{ backgroundColor: budget.color }}
-                    aria-hidden
-                  />
-                  {budget.name}
-                </CardTitle>
-                <CardDescription className="tabular">
-                  {formatCurrency(budget.spent, { hideZeroCents: true })} of{" "}
-                  {formatCurrency(budget.limit, { hideZeroCents: true })}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                <Progress
-                  value={Math.min(percent, 100)}
-                  aria-label={`${budget.name}: ${percent}% of budget used`}
-                  className="h-1.5"
-                  indicatorClassName={over ? "bg-negative" : near ? "bg-warning" : "bg-positive"}
-                />
-
-                <div className="flex items-center justify-between gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      over
-                        ? "border-negative/40 text-negative"
-                        : near
-                          ? "border-warning/40 text-warning"
-                          : "border-positive/40 text-positive"
-                    }
-                  >
-                    {over ? (
-                      <AlertTriangle className="size-3" aria-hidden />
-                    ) : (
-                      <CheckCircle2 className="size-3" aria-hidden />
-                    )}
-                    {percent}%
-                  </Badge>
-
-                  <p className={over ? "tabular text-xs text-negative" : "tabular text-xs text-muted-foreground"}>
-                    {over
-                      ? `${formatCurrency(Math.abs(remaining), { hideZeroCents: true })} over`
-                      : `${formatCurrency(remaining, { hideZeroCents: true })} left`}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-
-        <Card className="border-dashed bg-transparent">
-          <CardContent className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <Target className="size-4" aria-hidden />
-            </span>
-            <p className="text-sm font-medium">Add a category budget</p>
-            <p className="max-w-[16rem] text-xs text-muted-foreground">
-              Budget editing is wired up with the transaction data layer in step 5.
-            </p>
+      {budgets.length === 0 ? (
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={Target}
+              title={`No budgets for ${monthLabel(monthKey)}`}
+              description="Set a monthly limit for an expense category and this page will track spending against it."
+            >
+              <BudgetDialog categories={categories} month={monthKey}>
+                <Button size="sm">
+                  <Plus aria-hidden />
+                  Set your first budget
+                </Button>
+              </BudgetDialog>
+            </EmptyState>
           </CardContent>
         </Card>
-      </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {budgets.map((budget) => (
+            <BudgetCard
+              key={budget.id}
+              budget={budget}
+              categories={categories}
+              monthKey={monthKey}
+            />
+          ))}
+        </div>
+      )}
     </>
   );
 }

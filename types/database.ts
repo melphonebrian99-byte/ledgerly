@@ -166,7 +166,20 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      finance_summary: {
+        Args: {
+          p_month_start: string;
+        };
+        Returns: {
+          total_balance_cents: number;
+          month_income_cents: number;
+          month_expense_cents: number;
+          month_income_count: number;
+          month_expense_count: number;
+        }[];
+      };
+    };
     Enums: {
       transaction_kind: TransactionKind;
     };

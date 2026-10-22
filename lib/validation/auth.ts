@@ -58,38 +58,8 @@ export type AuthFormState = {
 
 export const IDLE_AUTH_STATE: AuthFormState = { status: "idle" };
 
-export function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-
-  for (const issue of error.issues) {
-    const key = issue.path[0];
-    // First message per field wins; the rest would just stack up under the input.
-    if (typeof key === "string" && fieldErrors[key] === undefined) {
-      fieldErrors[key] = issue.message;
-    }
-  }
-
-  return fieldErrors;
-}
-
 /**
- * Reads only the named fields out of FormData as strings.
- *
- * `Object.fromEntries(formData)` would also pull in hidden inputs, which zod
- * strips anyway — but it is easy to forget a field, and a missing key would then
- * validate as `undefined` rather than "". An explicit list keeps the browser and
- * server paths identical.
+ * Shared with every other form in the app — re-exported here so auth imports
+ * stay put.
  */
-export function formValues(
-  formData: FormData,
-  keys: readonly string[],
-): Record<string, string> {
-  const values: Record<string, string> = {};
-
-  for (const key of keys) {
-    const raw = formData.get(key);
-    values[key] = typeof raw === "string" ? raw : "";
-  }
-
-  return values;
-}
+export { fieldErrorsFrom, formValues } from "./form";
