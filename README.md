@@ -11,10 +11,16 @@ category, transaction CRUD, and monthly budget goals.
 | Step | Scope | State |
 | --- | --- | --- |
 | 1 | Scaffold, theme tokens, base shell | ✅ done |
-| 2 | Supabase schema + RLS | ⏳ next |
-| 3 | shadcn primitives + Supabase clients | ⏳ |
+| 2 | Supabase schema + RLS | ✅ authored — **needs applying to a project** |
+| 3 | shadcn primitives + Supabase clients | ⏳ next |
 | 4 | Auth screens + route guard | ⏳ |
 | 5 | Dashboard, transactions, budgets | ⏳ |
+
+Email confirmation is **on**: signup redirects to `/auth/callback?token_hash=…`
+and the session is only created after the link is clicked.
+
+Currency is **KES** (Kenyan shilling), displayed as `Ksh 1,234.50` via
+`lib/money.ts`.
 
 ## Getting started
 
