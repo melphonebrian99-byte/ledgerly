@@ -1,0 +1,9 @@
+# Normalize line endings in the repo, regardless of the machine's
+# core.autocrlf setting, so Windows/macOS/Linux checkouts stay consistent.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
