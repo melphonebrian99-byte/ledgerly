@@ -283,9 +283,10 @@ create policy budgets_delete_own on public.budgets
 -- -----------------------------------------------------------------------------
 -- 7. Privileges
 -- -----------------------------------------------------------------------------
--- Anonymous visitors get nothing at all on these tables. The marketing pages
--- are static and never touch the database.
-revoke all on public.profiles     from anon;
+-- Supabase's default privileges hand new tables in `public` to anon and
+-- authenticated. Revoke explicitly rather than relying on RLS alone: two
+-- independent layers should both encode the same intent.
+revoke all on public.profiles     from anon, authenticated;
 revoke all on public.categories   from anon;
 revoke all on public.transactions from anon;
 revoke all on public.budgets      from anon;
@@ -293,7 +294,16 @@ revoke all on public.budgets      from anon;
 grant select, insert, update, delete on public.transactions to authenticated;
 grant select, insert, update, delete on public.budgets      to authenticated;
 grant select, insert, update, delete on public.categories  to authenticated;
+
+-- profiles rows are created by handle_new_user() and removed by the auth.users
+-- cascade, so the app only ever needs to read and update its own row.
 grant select, update                 on public.profiles    to authenticated;
+
+-- TRUNCATE is not subject to row-level security, and Supabase's default
+-- privileges hand it to `authenticated` on every new table. PostgREST cannot
+-- reach TRUNCATE today, but the grant layer should not offer a lever that RLS
+-- cannot see. REFERENCES and TRIGGER are likewise never needed by the app.
+revoke truncate, references, trigger on all tables in schema public from anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 8. Seed: global default categories (user_id IS NULL)

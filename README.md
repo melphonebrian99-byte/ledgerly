@@ -11,9 +11,9 @@ category, transaction CRUD, and monthly budget goals.
 | Step | Scope | State |
 | --- | --- | --- |
 | 1 | Scaffold, theme tokens, base shell | ✅ done |
-| 2 | Supabase schema + RLS | ✅ authored — **needs applying to a project** |
+| 2 | Supabase schema + RLS | ✅ applied — 15 categories, 14 policies, isolation test passing |
 | 3 | shadcn primitives + Supabase clients | ✅ done — app shell renders with sample data |
-| 4 | Auth screens + route guard | ✅ code done — **needs credentials to verify live** |
+| 4 | Auth screens + route guard | ✅ verified live — sign-in, sign-out, guard, callback |
 | 5 | Dashboard, transactions, budgets | ⏳ next |
 
 Email confirmation is **on**: signup redirects to `/auth/callback?token_hash=…`
@@ -49,8 +49,8 @@ old project.
 
 ### Supabase setup
 
-Four one-time steps in the dashboard. The app runs without them, but auth and
-data will not work.
+Four one-time steps for a fresh project. Steps 1–2 are already applied to the
+project this app points at; steps 3–4 are dashboard configuration.
 
 1. **Apply the schema.** Paste `supabase/migrations/0001_init.sql` into the SQL
    Editor and run it. It creates the tables, constraints, triggers, RLS policies,
