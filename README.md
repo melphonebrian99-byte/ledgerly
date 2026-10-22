@@ -12,8 +12,8 @@ category, transaction CRUD, and monthly budget goals.
 | --- | --- | --- |
 | 1 | Scaffold, theme tokens, base shell | ✅ done |
 | 2 | Supabase schema + RLS | ✅ authored — **needs applying to a project** |
-| 3 | shadcn primitives + Supabase clients | ⏳ next |
-| 4 | Auth screens + route guard | ⏳ |
+| 3 | shadcn primitives + Supabase clients | ✅ done — app shell renders with sample data |
+| 4 | Auth screens + route guard | ⏳ next — **needs Supabase credentials** |
 | 5 | Dashboard, transactions, budgets | ⏳ |
 
 Email confirmation is **on**: signup redirects to `/auth/callback?token_hash=…`
@@ -63,3 +63,9 @@ Security.
   color with an icon and a `+`/`-` sign.
 - **Dark first.** Tokens live in `app/globals.css`; `class="dark"` on `<html>`
   is the entire theme switch.
+- **Session refresh lives in `proxy.ts`.** Next 16 renamed `middleware.ts` to
+  `proxy.ts`; the proxy revalidates the Supabase cookie on every matched request.
+  With no credentials configured it no-ops, so the app still boots.
+- **Missing config fails at use, not at import.** `lib/env.ts` throws a
+  directional error only when a Supabase client is actually constructed, which
+  keeps `npm run build` usable before a project exists.
