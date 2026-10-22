@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { LogIn, UserRound } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,45 +12,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { signOut } from "@/lib/actions/auth";
 
-/**
- * Placeholder account control.
- *
- * There is no session yet — auth lands in step 4. Rather than fake a signed-in
- * user, this shows an explicit "not signed in" state with the two real
- * destinations. Step 4 swaps the body for the user's email and a sign-out
- * action, without changing the menu structure.
- */
-export function UserMenu() {
+export function UserMenu({ email }: { email: string }) {
+  const initial = email.trim().charAt(0).toUpperCase() || "?";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          aria-label={`Account menu for ${email}`}
+        >
           <Avatar className="size-7">
-            <AvatarFallback className="bg-muted text-muted-foreground">
-              <UserRound className="size-3.5" aria-hidden />
+            <AvatarFallback className="bg-primary/15 text-xs font-medium text-primary">
+              {initial}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex items-center justify-between gap-2">
-          <span className="text-xs font-normal text-muted-foreground">Not signed in</span>
-          <Badge variant="outline" className="text-[10px]">
-            Guest
-          </Badge>
+      <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuLabel className="space-y-0.5">
+          <span className="flex items-center gap-1.5 text-[11px] font-normal text-muted-foreground">
+            <UserRound className="size-3" aria-hidden />
+            Signed in as
+          </span>
+          <span className="block truncate text-xs font-medium">{email}</span>
         </DropdownMenuLabel>
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/login">
-            <LogIn className="size-4" aria-hidden />
-            Sign in
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/signup">Create account</Link>
-        </DropdownMenuItem>
+
+        {/*
+          A form rather than an onClick: submitting a server action works before
+          hydration, and the redirect happens on the server where the session
+          cookies actually live.
+        */}
+        <form action={signOut}>
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full cursor-pointer">
+              <LogOut className="size-4" aria-hidden />
+              Sign out
+            </button>
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

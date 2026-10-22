@@ -4,15 +4,28 @@ import { Wallet } from "lucide-react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { UserMenu } from "@/components/layout/user-menu";
+import { requireUser } from "@/lib/auth";
 import { SITE_NAME } from "@/lib/site";
+
+/**
+ * Every route below this layout reads the session cookie, so none of them may be
+ * prerendered. Without this, a build that happened to run before Supabase was
+ * configured would bake a static "redirect to /login" response into the output
+ * and keep serving it even once credentials exist.
+ */
+export const dynamic = "force-dynamic";
 
 /**
  * Shell for the authenticated area.
  *
- * No auth guard yet — that is step 4, which adds the `getUser()` check here and
- * redirects to /login. The layout structure will not need to change.
+ * The guard lives here rather than in each page: every route below this layout
+ * needs a user, and a per-page check is a check someone eventually forgets.
+ * `proxy.ts` also redirects earlier so the shell never renders for a signed-out
+ * visitor, but this is the authoritative check.
  */
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
+
   return (
     <div className="flex min-h-dvh w-full">
       <AppSidebar />
@@ -31,7 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <UserMenu />
+            <UserMenu email={user.email ?? "Signed in"} />
           </div>
         </header>
 
